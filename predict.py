@@ -10,6 +10,7 @@ os.environ["TORCH_HOME"] = MODEL_PATH
 
 
 import shutil
+import random
 
 from tempfile import TemporaryDirectory
 from distutils.dir_util import copy_tree
@@ -181,9 +182,9 @@ class Predictor(BasePredictor):
         )
 
         if not seed or seed == -1:
-            seed = torch.seed()
-        else:
-            torch.manual_seed(seed)
+            seed = torch.seed() % 2**32 - 1
+            set_all_seeds(seed)
+        set_all_seeds(seed)
         print(f"Using seed {seed}")
 
         print("Generating variation 1")
@@ -232,11 +233,13 @@ class Predictor(BasePredictor):
         stretched = pyrb.time_stretch(loop, model.sample_rate, bpm / actual_bpm)
 
         outputs = Outputs()
-        add_output(outputs, self.write(stretched, model.sample_rate, output_format, "out-0"))
+        add_output(
+            outputs, self.write(stretched, model.sample_rate, output_format, "out-0")
+        )
 
         if variations > 1:
             # Use last 4 beats as audio prompt
-            last_4beats = beats[beats[:, 0] < end_time][-4:]
+            last_4beats = beats[beats[:, 0] <= end_time][-5:]
             audio_prompt_start_time = last_4beats[0][0]
             audio_prompt_end_time = last_4beats[-1][0]
             audio_prompt_start_sample = int(audio_prompt_start_time * model.sample_rate)
@@ -280,7 +283,7 @@ class Predictor(BasePredictor):
                         model.sample_rate,
                         output_format,
                         f"out-{i}",
-                    )
+                    ),
                 )
 
         return outputs
@@ -334,3 +337,13 @@ def add_output(outputs, path):
             setattr(outputs, field, path)
             return
     raise ValueError("Failed to add output")
+
+
+# From https://gist.github.com/gatheluck/c57e2a40e3122028ceaecc3cb0d152ac
+def set_all_seeds(seed):
+    random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
