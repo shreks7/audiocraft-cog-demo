@@ -8,7 +8,6 @@ MODEL_PATH = "/src/models/"
 os.environ["TRANSFORMERS_CACHE"] = MODEL_PATH
 os.environ["TORCH_HOME"] = MODEL_PATH
 
-
 import shutil
 import random
 
@@ -25,11 +24,6 @@ import subprocess
 import typing as tp
 
 from audiocraft.models import MusicGen
-from audiocraft.models.loaders import (
-    load_compression_model,
-    load_lm_model,
-    HF_MODEL_CHECKPOINTS_MAP,
-)
 from audiocraft.data.audio import audio_write
 
 from BeatNet.BeatNet import BeatNet
@@ -105,16 +99,17 @@ class Predictor(BasePredictor):
         if device is None:
             device = self.device
 
-        name = next(
-            (key for key, val in HF_MODEL_CHECKPOINTS_MAP.items() if val == model_id),
-            None,
-        )
-        compression_model = load_compression_model(
-            name, device=device, cache_dir=model_path
-        )
-        lm = load_lm_model(name, device=device, cache_dir=model_path)
 
-        return MusicGen(name, compression_model, lm)
+        # name = next(
+        #     (key for key, val in HF_MODEL_CHECKPOINTS_MAP.items() if val == model_id),
+        #     None,
+        # )
+        # compression_model = load_compression_model(
+        #     name, device=device, cache_dir=model_path
+        # )
+        # lm = load_lm_model(name, device=device, cache_dir=model_path)
+
+        return MusicGen.get_pretrained(model_id)
 
     def predict(
         self,
@@ -198,7 +193,7 @@ class Predictor(BasePredictor):
         loop_seconds = end_time - start_time
 
         print("Beats:\n", beats)
-        print(f"{start_time=}, {end_time=}")
+        print(f"{start_time}, {end_time}")
 
         num_beats = len(beats[(beats[:, 0] >= start_time) & (beats[:, 0] < end_time)])
         duration = end_time - start_time
