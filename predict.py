@@ -24,6 +24,11 @@ import subprocess
 import typing as tp
 
 from audiocraft.models import MusicGen
+from audiocraft.models.loaders import (
+    load_compression_model,
+    load_lm_model,
+)
+from audiocraft.data.audio import audio_write
 from audiocraft.data.audio import audio_write
 
 from BeatNet.BeatNet import BeatNet
@@ -100,16 +105,14 @@ class Predictor(BasePredictor):
             device = self.device
 
 
-        # name = next(
-        #     (key for key, val in HF_MODEL_CHECKPOINTS_MAP.items() if val == model_id),
-        #     None,
-        # )
-        # compression_model = load_compression_model(
-        #     name, device=device, cache_dir=model_path
-        # )
-        # lm = load_lm_model(name, device=device, cache_dir=model_path)
+        name = model_id
+        print("Loading model:"+name)
+        compression_model = load_compression_model(
+            name, device=device, cache_dir=model_path
+        )
+        lm = load_lm_model(name, device=device, cache_dir=model_path)
 
-        return MusicGen.get_pretrained(model_id)
+        return MusicGen(name, compression_model, lm)
 
     def predict(
         self,
